@@ -6,6 +6,7 @@ import datetime
 from re import search
 import psutil
 
+windows = os.name == "nt"
 
 def lookup(ip) :
     if search("[a-z]+\.+[a-z]", ip):
@@ -14,7 +15,10 @@ def lookup(ip) :
         return("invalid input")
 
 def ping(ip) :
-    response = os.system(f"ping {ip} > nul")
+    if windows :
+        response = os.system(f"ping {ip} > nul")
+    else :
+        response = os.system(f"ping -c 1 {ip} > /dev/null 2>&1")
     if not search("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", ip):
         return("invalid input")
     if response == 0 :
@@ -23,7 +27,10 @@ def ping(ip) :
         return("DOWN !")
 
 def ip() :
-    infos = str(psutil.net_if_addrs()['Wi-Fi'][1])
+    if windows :
+        infos = str(psutil.net_if_addrs()['Wi-Fi'][1])
+    else :
+        infos = str(psutil.net_if_addrs()['enp0s3'][0])
     netmask = infos.split('\'')[3].split(".")
     counter = list()
     for octet in netmask:
@@ -51,9 +58,12 @@ def makelog(output) :
     elif output == f"{argv[1]} is not an available command. Déso." :
         status = f" [ERROR] Command {argv[1]} unknown"
 
-    pathfold = os.path.join(os.getenv('localappdata'), "Temp", "network_tp3")
-    LOG_PATH = os.path.join(os.getenv('localappdata'), "Temp", "network_tp3", "network.log")
-
+    if windows :
+        pathfold = os.path.join(os.getenv('localappdata'), "Temp", "network_tp3")
+        LOG_PATH = os.path.join(os.getenv('localappdata'), "Temp", "network_tp3", "network.log")
+    else :
+        pathfold = os.path.join("/tmp", "network_tp3")
+        LOG_PATH = os.path.join("/tmp", "network_tp3", "network.log")
     if not(os.path.exists(pathfold) and os.path.isdir(pathfold)):
         os.makedirs(pathfold)
 
@@ -61,7 +71,6 @@ def makelog(output) :
     ts = time.time()
     log = str(datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S') + status + ".\n")
     logfile.write(log)
-
 
 output = getresponse()
 print(output)
